@@ -10,65 +10,68 @@ public class ListGraph<T> implements Serializable{
         adjacencyList = new ArrayList<>();
     }
 
+    //add node method
     public void add(T node){
         if(!nodes.contains(node))
             nodes.add(node);
         adjacencyList.add(new ArrayList<Edge<T>>());
     }
 
-    //inte klar
-    public void connect(T node1, T node2, String name, int weight){
+    //connect two nodes method | tested
+    public void connect(T node1, T node2, String name, int weight) throws NoSuchElementException, IllegalArgumentException, IllegalStateException{
         try{
+            if(weight < 0)
+                throw new IllegalArgumentException();
+            else if(!nodes.contains(node1) || !nodes.contains(node2))
+                throw new NoSuchElementException();
+            else if(getEdgeBetween(node1, node2) != null)
+                throw new IllegalStateException();
+            
             Edge<T> edge1 = new Edge<T>(weight, name, node2);
             Edge<T> edge2 = new Edge<T>(weight, name, node1);
             adjacencyList.get(nodes.indexOf(node1)).add(edge1);
             adjacencyList.get(nodes.indexOf(node2)).add(edge2);
+
         } catch(IllegalArgumentException e){
+            System.err.println("The given weight can not be negative");
             e.getStackTrace();
-        }
+            throw e;
+        } catch(IllegalStateException e){
+            System.err.println("An edge between the two nodes already exists");
+            e.getStackTrace();
+            throw e;
+        } catch(NoSuchElementException e){
+            System.err.println("One or both nodes doesn't exist");
+            e.getStackTrace();
+            throw e;
+        } 
     }
 
-    public void disconnect(T node1, T node2) {
-        int index1 = nodes.indexOf(node1);
-        int index2 = nodes.indexOf(node2);
-    
-        // Check if either node does not exist in the graph
-        if (index1 == -1 || index2 == -1) {
-            throw new NoSuchElementException("One or both of the specified nodes do not exist in the graph.");
+    //disconnect 2 nodes method | tested
+    public void disconnect(T node1, T node2) throws NoSuchElementException, IllegalStateException{
+        try{
+            int index1 = nodes.indexOf(node1);
+            int index2 = nodes.indexOf(node2);
+        
+            Edge<T> edge = getEdgeBetween(node1, node2);
+
+            System.out.println(edge);
+            if(edge == null)
+                throw new IllegalStateException();
+
+            adjacencyList.get(index1).removeIf(index -> index == edge);
+            adjacencyList.get(index2).removeIf(index -> index == edge);
+
+        } catch(NoSuchElementException e){
+            //getEdgeBetween prints and throws the exception
+        } catch(IllegalStateException e){
+            System.err.println("No edge exists between the specified nodes.");
+            e.printStackTrace();
+            throw e;
         }
-    
-        // Get the edge from node1 to node2
-        Edge<T> edgeFromNode1ToNode2 = null;
-        List<Edge<T>> edgesFromNode1 = adjacencyList.get(index1);
-        for (Edge<T> edge : edgesFromNode1) {
-            if (edge.getDestination().equals(node2)) {
-                edgeFromNode1ToNode2 = edge;
-                break;
-            }
-        }
-    
-        // Get the edge from node2 to node1
-        Edge<T> edgeFromNode2ToNode1 = null;
-        List<Edge<T>> edgesFromNode2 = adjacencyList.get(index2);
-        for (Edge<T> edge : edgesFromNode2) {
-            if (edge.getDestination().equals(node1)) {
-                edgeFromNode2ToNode1 = edge;
-                break;
-            }
-        }
-    
-        // Check if either edge does not exist
-        if (edgeFromNode1ToNode2 == null || edgeFromNode2ToNode1 == null) {
-            throw new IllegalStateException("No edge exists between the specified nodes.");
-        }
-    
-        // Remove the edges from both directions
-        edgesFromNode1.remove(edgeFromNode1ToNode2);
-        edgesFromNode2.remove(edgeFromNode2ToNode1);
     }
     
-
-    //Checks path with dfs
+    //Checks if path exists method | tested
     public boolean pathExists(T from, T to){
         if(from == to)
             return true;
@@ -84,21 +87,28 @@ public class ListGraph<T> implements Serializable{
         return result;
     }
 
+    //get all nodes method
     public List<T> getNodes() {
         return new ArrayList<>(nodes);
     }
     
-    public List<Edge<T>> getEdgesFrom(T node) {
+    //get edges from a node method | tested
+    public List<Edge<T>> getEdgesFrom(T node) throws NoSuchElementException {
         int index = nodes.indexOf(node);
-        if (index == -1) {
-            throw new NoSuchElementException("Node not found in the graph.");
+
+        try{
+            if (index == -1) {
+                throw new NoSuchElementException();
+            }
+        } catch (NoSuchElementException e) {
+            System.err.println("node doesn't exist");
         }
-    
+
         return new ArrayList<>(adjacencyList.get(index));
     }
 
-    //getEdgesBetween method | tested
-    public Edge<T> getEdgeBetween(T from, T to) throws NoSuchElementException, IllegalArgumentException{
+    //get edges between two nodes method | tested
+    public Edge<T> getEdgeBetween(T from, T to) throws NoSuchElementException{
         try{
             int index1 = nodes.indexOf(from);
             int index2 = nodes.indexOf(to);
@@ -115,18 +125,13 @@ public class ListGraph<T> implements Serializable{
                 }
             }
         
-            throw new IllegalArgumentException();
         } catch(NoSuchElementException e) {
             System.err.println("One or both of the specified nodes do not exist in the graph.");
             e.printStackTrace();
             throw e;
-        } catch(IllegalArgumentException e){
-            System.err.println("No edge exists between the specified nodes.");
-            e.printStackTrace();
-            throw e;
-        }
+        } 
         
-
+        return null;
     }
     
     //Remove node method | tested
@@ -172,4 +177,5 @@ public class ListGraph<T> implements Serializable{
         }
         return false;
     }
+
 }
