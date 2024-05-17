@@ -178,4 +178,31 @@ public class ListGraph<T> implements Serializable{
         return false;
     }
 
+    public void setConnectionWeight(T node1, T node2, int newWeight) throws NoSuchElementException, IllegalArgumentException {
+        if (newWeight < 0) {
+            throw new IllegalArgumentException("Weight cannot be negative");
+        }
+
+        int index1 = nodes.indexOf(node1);
+        int index2 = nodes.indexOf(node2);
+
+        if (index1 == -1 || index2 == -1) {
+            throw new NoSuchElementException("One or both of the nodes do not exist");
+        }
+
+        Edge<T> edge = getEdgeBetween(node1, node2);
+        if (edge == null) {
+            throw new NoSuchElementException("No edge exists between the specified nodes");
+        }
+
+        edge.setWeight(newWeight);
+
+        for (Edge<T> e : adjacencyList.get(index2)) {
+            if (e.getDestination().equals(node1)) {
+                e.setWeight(newWeight);
+                break;
+            }
+        }
+    }
+
 }
