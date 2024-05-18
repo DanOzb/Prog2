@@ -8,7 +8,6 @@ public class ListGraph<T> implements Serializable{
     private Map<T, Integer> nodesMap = new HashMap<>();
 
 
-
     ListGraph(){
         nodes = new ArrayList<>();
         adjacencyList = new ArrayList<>();
@@ -226,6 +225,19 @@ public class ListGraph<T> implements Serializable{
         return shortestPathMap.get(targetNode);
     }
 
+    public String toString(){
+        String nodeText = ""; 
+        for(T node  : nodes){
+            nodeText += node.toString() + ": \n";
+            for(Edge<T> edge : adjacencyList.get(nodes.indexOf(node))){
+                nodeText += edge.toString() + "\n";
+            }
+            nodeText += "\n \n";
+        }
+        return nodeText;
+    }
+
+    //get node with lowest weight method
     private T getLowestWeightNode(Set<T> set, Map<T, Integer> map){
         T lowestWeightNode = null;
         int minimum = Integer.MAX_VALUE;
@@ -238,7 +250,7 @@ public class ListGraph<T> implements Serializable{
         }
         return lowestWeightNode;
     }
-
+    //calculate shortest path between nodes method
     private void calculateShortestPath(Edge<T> edge, int edgeWeight ,T currentNode){
         int sourceWeight = nodesMap.get(currentNode);
         T nextNode = edge.getDestination();
@@ -262,9 +274,7 @@ public class ListGraph<T> implements Serializable{
 
         List<Edge<T>> list = new ArrayList<>(adjacencyList.get(nodes.indexOf(from)));
         for(Edge<T> e : list){
-            //System.out.println(list.indexOf(e));
             if(!isVisited[nodes.indexOf(e.getDestination())]){
-                //System.out.println("Edges destination: " + e.getDestination());
                 if(dfs(nodes.get(nodes.indexOf(e.getDestination())), to, isVisited)){
                     return true;
                 }

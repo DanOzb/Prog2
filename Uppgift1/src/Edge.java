@@ -28,6 +28,7 @@ public class Edge<T> implements Serializable {
     }
 
     public String toString(){
-        return String.format("%s | %d | %s", name, weight, destination.toString());
+        
+        return String.format("Edge info: %s | %d | %s", name, weight, destination.toString());
     }
 }

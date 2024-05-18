@@ -180,6 +180,32 @@ public class Main {
 
     }
 
+    public static void testToStringMethod(){
+        ListGraph<String> graph = new ListGraph<>();
+
+        graph.add("NodeA");
+        graph.add("NodeB");
+        graph.add("NodeC");
+        graph.add("NodeD");
+        graph.add("NodeE");
+        graph.add("NodeF");
+
+        graph.connect("NodeA", "NodeB", "A to B", 10);
+        graph.connect("NodeA", "NodeC", "A to C", 15);
+
+        graph.connect("NodeC", "NodeE", "C to E", 10);
+
+        graph.connect("NodeB", "NodeD", "B to D", 12);
+        graph.connect("NodeB", "NodeF", "B to F", 15);
+
+        graph.connect("NodeD", "NodeF", "D to F", 1);
+        graph.connect("NodeD", "NodeE", "D to E", 2);
+
+        graph.connect("NodeF", "NodeE", "F to E", 5);
+
+        System.out.println(graph.toString());
+    }
+
     public static void main(String[] args){
 
         //testRemoveMethod();
@@ -189,6 +215,7 @@ public class Main {
         //testDisconnectMethod();
         //testConnectionMethod();
         //testSetWeightMethod();
-        testGetPathMethod();
+        //testGetPathMethod();
+        testToStringMethod();
     }
 }
