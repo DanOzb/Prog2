@@ -24,11 +24,19 @@ public class Edge<T> implements Serializable {
     }
 
     public void setWeight(int weight){
-        this.weight = weight;
+        try{
+            if(weight < 0)
+                throw new IllegalArgumentException();
+            this.weight = weight;
+        } catch(IllegalArgumentException e){
+            System.err.println("Weight can not be negative");
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     public String toString(){
-        
-        return String.format("Edge info: %s | %d | %s", name, weight, destination.toString());
+        //vpl wants it this way
+        return String.format("till %s med %s tar %d", destination, name, weight);
     }
 }

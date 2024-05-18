@@ -86,14 +86,13 @@ public class Main {
 
         graph.connect("NodeA", "NodeB", "Connection1", 0);
         graph.connect("NodeB", "NodeC", "Connection2", 0);
-        System.out.println("Node A and Node B: " + graph.pathExists("NodeA", "NodeB"));
 
-        graph.disconnect("NodeA", "NodeB");
-        //checks if no such element exception works
-        //System.out.println("Node A and Node B: " + graph.pathExists("NodeA", "NodeB"));
+        graph.disconnect("NodeB", "NodeA");
+        System.out.println(graph.getEdgesFrom("NodeA"));
+        System.out.println(graph.getEdgesFrom("NodeB"));
 
         try{
-            graph.disconnect("NodeA", "NodeD");
+            //graph.disconnect("NodeA", "NodeD");
         } catch(NoSuchElementException e){
             helpMethod2(graph);
         } 
@@ -148,7 +147,7 @@ public class Main {
 
         System.out.println("Should be weight 5: " + graph.getEdgeBetween("NodeA", "NodeB")); 
 
-        //graph.setConnectionWeight("NodeA", "NodeB", -1);
+        graph.setConnectionWeight("NodeA", "NodeB", -1);
         //graph.setConnectionWeight("NodeA", "NodeC", 5);
         //graph.setConnectionWeight("NodeA", "NodeD", 5);
     }
@@ -214,8 +213,8 @@ public class Main {
         //testPathExistsMethod();
         //testDisconnectMethod();
         //testConnectionMethod();
-        //testSetWeightMethod();
+        testSetWeightMethod();
         //testGetPathMethod();
-        testToStringMethod();
+        //testToStringMethod();
     }
 }

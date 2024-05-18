@@ -53,20 +53,19 @@ public class ListGraph<T> implements Serializable{
     //disconnect 2 nodes method | tested
     public void disconnect(T node1, T node2) throws NoSuchElementException, IllegalStateException{
         try{
+            Edge<T> edge = getEdgeBetween(node1, node2);
+            Edge<T> edge2 = getEdgeBetween(node2, node1);
+
             int index1 = nodes.indexOf(node1);
             int index2 = nodes.indexOf(node2);
-        
-            Edge<T> edge = getEdgeBetween(node1, node2);
 
-            System.out.println(edge);
             if(edge == null)
                 throw new IllegalStateException();
 
-            adjacencyList.get(index1).removeIf(index -> index == edge);
-            adjacencyList.get(index2).removeIf(index -> index == edge);
+            adjacencyList.get(index1).removeIf(index -> index == edge || index == edge2);
+            adjacencyList.get(index2).removeIf(index -> index ==  edge || index == edge2);
 
-        } catch(NoSuchElementException e){
-            //getEdgeBetween prints and throws the exception
+
         } catch(IllegalStateException e){
             System.err.println("No edge exists between the specified nodes.");
             e.printStackTrace();
@@ -91,23 +90,25 @@ public class ListGraph<T> implements Serializable{
     }
 
     //get all nodes method
-    public List<T> getNodes() {
-        return new ArrayList<>(nodes);
+    public Set<T> getNodes() {
+        return new HashSet<>(nodes);
     }
     
     //get edges from a node method | tested
     public List<Edge<T>> getEdgesFrom(T node) throws NoSuchElementException {
-        int index = nodes.indexOf(node);
-
         try{
+            int index = nodes.indexOf(node);
             if (index == -1) {
                 throw new NoSuchElementException();
+            } else {
+                return new ArrayList<>(adjacencyList.get(index));
             }
         } catch (NoSuchElementException e) {
             System.err.println("node doesn't exist");
+            e.printStackTrace();
+            throw e;
         }
 
-        return new ArrayList<>(adjacencyList.get(index));
     }
 
     //get edges between two nodes method | tested
@@ -162,18 +163,19 @@ public class ListGraph<T> implements Serializable{
         String noNodeMessage = "There is no edge between the nodes";
         try {    
             if (newWeight < 0) {
-                throw new IllegalArgumentException("Weight cannot be negative");
+                throw new IllegalArgumentException();
             }
             int index1 = nodes.indexOf(node1);
             int index2 = nodes.indexOf(node2);
 
             if (index1 == -1 || index2 == -1) {
-                throw new NoSuchElementException("One or both of the nodes do not exist");
+                noNodeMessage = "One or both of the nodes do not exist";
+                throw new NoSuchElementException();
             }
             Edge<T> edge = getEdgeBetween(node1, node2);
 
             if (edge == null) {
-                throw new NoSuchElementException("No edge exists between the specified nodes");
+                throw new NoSuchElementException();
             }
             edge.setWeight(newWeight);
     
