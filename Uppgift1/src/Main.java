@@ -64,6 +64,7 @@ public class Main {
         graph.add("NodeA");
         graph.add("NodeB");
         graph.add("NodeC");
+        graph.add("NodeD");
 
         graph.connect("NodeA", "NodeB", "Connection1", 0);
 
@@ -129,6 +130,47 @@ public class Main {
         //graph.connect("NodeA", "NodeD", "Connection1", 0);
 
     }
+    
+    private static void testSetWeightMethod(){
+        ListGraph<String> graph = new ListGraph<>();
+        graph.add("NodeA");
+        graph.add("NodeB");
+        graph.add("NodeC");
+
+        graph.connect("NodeA", "NodeB", "something", 0);
+        graph.connect("NodeA", "NodeC", "something", 0);
+
+        System.out.println("Should be weight 0: " + graph.getEdgeBetween("NodeA", "NodeB"));
+        System.out.println("Should be weight 0: " + graph.getEdgeBetween("NodeA", "NodeC")); 
+ 
+
+        graph.setConnectionWeight("NodeA", "NodeB", 5);
+
+        System.out.println("Should be weight 5: " + graph.getEdgeBetween("NodeA", "NodeB")); 
+
+        //graph.setConnectionWeight("NodeA", "NodeB", -1);
+        //graph.setConnectionWeight("NodeA", "NodeC", 5);
+        //graph.setConnectionWeight("NodeA", "NodeD", 5);
+    }
+
+    public static void testGetPathMethod(){
+        ListGraph<String> graph = new ListGraph<>();
+
+        graph.add("NodeA");
+        graph.add("NodeB");
+        graph.add("NodeC");
+        graph.add("NodeD");
+        graph.add("NodeE");
+        graph.add("NodeF");
+
+        graph.connect("NodeA", "NodeB", "A to B", 1);
+        graph.connect("NodeB", "NodeC", "B to C", 4);
+        graph.connect("NodeA", "NodeD", "A to D", 2);
+        graph.connect("NodeD", "NodeC", "D to C", 1);
+
+
+    }
+
     public static void main(String[] args){
 
         //testRemoveMethod();
@@ -137,5 +179,7 @@ public class Main {
         //testPathExistsMethod();
         //testDisconnectMethod();
         //testConnectionMethod();
+        testSetWeightMethod();
+        //testGetPathMethod();
     }
 }

@@ -154,6 +154,76 @@ public class ListGraph<T> implements Serializable{
         }
     }
 
+    //set edge connection method | tested
+    public void setConnectionWeight(T node1, T node2, int newWeight) throws IllegalArgumentException, NoSuchElementException{
+        String noNodeMessage = "There is no edge between the nodes";
+        try {    
+            if (newWeight < 0) {
+                throw new IllegalArgumentException("Weight cannot be negative");
+            }
+            int index1 = nodes.indexOf(node1);
+            int index2 = nodes.indexOf(node2);
+
+            if (index1 == -1 || index2 == -1) {
+                throw new NoSuchElementException("One or both of the nodes do not exist");
+            }
+            Edge<T> edge = getEdgeBetween(node1, node2);
+
+            if (edge == null) {
+                throw new NoSuchElementException("No edge exists between the specified nodes");
+            }
+            edge.setWeight(newWeight);
+    
+            for (Edge<T> e : adjacencyList.get(index2)) {
+                if (e.getDestination().equals(node1)) {
+                    e.setWeight(newWeight);
+                    break;
+                }
+            }
+        } catch(IllegalArgumentException e){ 
+            System.err.println("Weight can not be negative");
+            e.printStackTrace();
+            throw e;
+        } catch(NoSuchElementException e){ 
+            System.err.println(noNodeMessage);
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    public List<Edge<T>> dijkistra(T sourceNode, T targetNode){
+        Map<T, Integer> nodesMap = new HashMap<>();
+        Set<T> settled = new HashSet<>();
+        Set<T> unsettled = new HashSet<>();
+        unsettled.add(sourceNode);
+        for(int i = 0; i < nodes.size(); i++){
+            nodesMap.put(nodes.get(i), Integer.MAX_VALUE);
+        }
+        
+        T currentNode = null;
+        while(!unsettled.isEmpty()){
+            currentNode = getLowestWeightNode(unsettled, nodesMap);
+            for(Edge<T> edge : adjacencyList.get(nodes.indexOf(currentNode))){
+                if(!settled.contains(edge.getDestination())){
+                    unsettled.add(edge.getDestination());
+
+                    nodesMap.put(edge.getDestination(), edge.getWeight() + nodesMap.get(currentNode));
+                } 
+            }
+        }
+        settled.add(currentNode);
+        return new ArrayList<>();
+    }
+
+    private T getLowestWeightNode(Set<T> set, Map<T, Integer> map){
+        T lowestWeightNode = null;
+        int minimum = Integer.MAX_VALUE;
+        for(T node : set){
+            lowestWeightNode = map.get(node) < minimum ? node : lowestWeightNode;
+            minimum = map.get(lowestWeightNode);
+        }
+        return lowestWeightNode;
+    }
 
       //DFS recursive implementation
       private boolean dfs(T from, T to, boolean[] isVisited){
@@ -177,5 +247,4 @@ public class ListGraph<T> implements Serializable{
         }
         return false;
     }
-
 }
