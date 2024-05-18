@@ -4,6 +4,10 @@ import java.util.*;
 public class ListGraph<T> implements Serializable{
     private List<T> nodes; 
     private List<List<Edge<T>>> adjacencyList;
+    private Map<T,LinkedList<Edge<T>>> shortestPathMap = new HashMap<>();
+    private Map<T, Integer> nodesMap = new HashMap<>();
+
+
 
     ListGraph(){
         nodes = new ArrayList<>();
@@ -191,39 +195,61 @@ public class ListGraph<T> implements Serializable{
         }
     }
 
-    public List<Edge<T>> dijkistra(T sourceNode, T targetNode){
-        Map<T, Integer> nodesMap = new HashMap<>();
+    //find shortest path between nodes | tested
+    public List<Edge<T>> getPath(T sourceNode, T targetNode){
+        if(!pathExists(sourceNode, targetNode))
+            return null;
         Set<T> settled = new HashSet<>();
         Set<T> unsettled = new HashSet<>();
         unsettled.add(sourceNode);
-        for(int i = 0; i < nodes.size(); i++){
-            nodesMap.put(nodes.get(i), Integer.MAX_VALUE);
+        for(T node : nodes){
+            nodesMap.put(node, Integer.MAX_VALUE);
+            shortestPathMap.put(node, new LinkedList<>());
         }
+        nodesMap.put(sourceNode, 0);
         
-        T currentNode = null;
         while(!unsettled.isEmpty()){
-            currentNode = getLowestWeightNode(unsettled, nodesMap);
+            T currentNode = getLowestWeightNode(unsettled, nodesMap);
+            unsettled.remove(currentNode);
             for(Edge<T> edge : adjacencyList.get(nodes.indexOf(currentNode))){
-                if(!settled.contains(edge.getDestination())){
-                    unsettled.add(edge.getDestination());
+                T nextNode = edge.getDestination();
 
-                    nodesMap.put(edge.getDestination(), edge.getWeight() + nodesMap.get(currentNode));
+                if(!settled.contains(nextNode)){
+                    calculateShortestPath(edge, edge.getWeight() ,currentNode);
+                    unsettled.add(nextNode);
+                    if(nodesMap.get(currentNode) < nodesMap.get(nextNode))
+                        nodesMap.put(nextNode, edge.getWeight() + nodesMap.get(currentNode));
                 } 
             }
+            settled.add(currentNode);
         }
-        settled.add(currentNode);
-        return new ArrayList<>();
+        return shortestPathMap.get(targetNode);
     }
 
     private T getLowestWeightNode(Set<T> set, Map<T, Integer> map){
         T lowestWeightNode = null;
         int minimum = Integer.MAX_VALUE;
         for(T node : set){
-            lowestWeightNode = map.get(node) < minimum ? node : lowestWeightNode;
-            minimum = map.get(lowestWeightNode);
+            int nodeWeight = map.get(node);
+            if(nodeWeight < minimum){
+                minimum = nodeWeight;
+                lowestWeightNode = node;
+            }
         }
         return lowestWeightNode;
     }
+
+    private void calculateShortestPath(Edge<T> edge, int edgeWeight ,T currentNode){
+        int sourceWeight = nodesMap.get(currentNode);
+        T nextNode = edge.getDestination();
+        if(sourceWeight + edgeWeight < nodesMap.get(nextNode)){
+            nodesMap.put(nextNode, sourceWeight + edgeWeight);
+            LinkedList<Edge<T>> shortestPath = new LinkedList<>(shortestPathMap.get(currentNode));
+            shortestPath.add(edge);
+            shortestPathMap.put(nextNode, shortestPath);
+        }
+    }
+
 
       //DFS recursive implementation
       private boolean dfs(T from, T to, boolean[] isVisited){
