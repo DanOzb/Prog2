@@ -1,11 +1,11 @@
 import java.io.Serializable;
 import java.util.*;
 
-public class ListGraph<T> implements Serializable{
-    private List<T> nodes; 
-    private List<List<Edge<T>>> adjacencyList;
-    private Map<T,LinkedList<Edge<T>>> shortestPathMap = new HashMap<>();
-    private Map<T, Integer> nodesMap = new HashMap<>();
+public class ListGraph<T> implements Graph<T>, Serializable{
+    private final List<T> nodes;
+    private final List<List<Edge<T>>> adjacencyList;
+    private final Map<T,LinkedList<Edge<T>>> shortestPathMap = new HashMap<>();
+    private final Map<T, Integer> nodesMap = new HashMap<>();
 
 
     ListGraph(){

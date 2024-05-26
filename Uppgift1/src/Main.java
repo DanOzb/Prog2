@@ -213,7 +213,7 @@ public class Main {
         //testPathExistsMethod();
         //testDisconnectMethod();
         //testConnectionMethod();
-        testSetWeightMethod();
+        //testSetWeightMethod();
         //testGetPathMethod();
         //testToStringMethod();
     }
