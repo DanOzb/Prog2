@@ -3,10 +3,17 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+
 public class PathFinder extends Application {
+
+    private final BorderPane root = new BorderPane();
 
     private final MenuBar menuBar = new MenuBar();
 
@@ -16,6 +23,12 @@ public class PathFinder extends Application {
     private final MyButton btnNewConnection = new MyButton("New Connection");
     private final MyButton btnChangeConnection = new MyButton("Change Connection");
 
+    private final Menu menu = new Menu("File");
+    private final MenuItem newMap = new MenuItem("New Map");
+    private final MenuItem open = new MenuItem("Open");
+    private final MenuItem save = new MenuItem("Save");
+    private final MenuItem saveImage = new MenuItem("Save Image");
+    private final MenuItem exit = new MenuItem("Exit");
 
     @Override
     public void start(Stage stage) {
@@ -32,15 +45,21 @@ public class PathFinder extends Application {
         FlowPane buttons = new FlowPane(hBox);
         buttons.setAlignment(Pos.TOP_CENTER);
 
+        //new map menu item event
+        newMap.setOnAction(event -> {
+            NewMap();
+            stage.setHeight(root.getPrefHeight());
+            stage.setY(0);
+        });
+
+        
+
         //set borderpane
-        BorderPane bp = new BorderPane();
-        bp.setTop(header);
-        bp.setCenter(buttons);
+        root.setTop(header);
+        root.setCenter(buttons);
 
         //set scene
-        Scene scene = new Scene(bp);
-        stage.setWidth(800);
-        stage.setHeight(600);
+        Scene scene = new Scene(root);
         stage.setTitle("PathFinder");
         stage.setScene(scene);
         stage.show();
@@ -49,14 +68,6 @@ public class PathFinder extends Application {
     private VBox setMenuBar(MenuBar menuBar){
         //set vbox and add menubar
         VBox vBox = new VBox(menuBar);
-
-        //set menu items
-        Menu menu = new Menu("File");
-        MenuItem newMap = new MenuItem("New Map");
-        MenuItem open = new MenuItem("Open");
-        MenuItem save = new MenuItem("Save");
-        MenuItem saveImage = new MenuItem("Save Image");
-        MenuItem exit = new MenuItem("Exit");
 
         //set menu id's
         menuBar.setId("menu");
@@ -72,7 +83,19 @@ public class PathFinder extends Application {
         menuBar.getMenus().addAll(menu);
 
         return vBox;
-    };
+    }
+
+    private void NewMap(){
+        try{
+            FileInputStream file = new FileInputStream("europa.gif");
+            Image image = new Image(file);
+            ImageView view = new ImageView(image);
+            root.setBottom(new FlowPane(view));
+            root.prefHeightProperty().bind(image.heightProperty());
+        } catch (FileNotFoundException e){
+            System.err.println("Cause of file not found exception :" + e.getCause());
+        }
+    }
 
     //create custom button class
     static class MyButton extends Button {
