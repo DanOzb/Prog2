@@ -1,15 +1,17 @@
 import javafx.application.Application;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import javax.imageio.ImageIO;
+import java.io.*;
 
 public class PathFinder extends Application {
 
@@ -45,14 +47,44 @@ public class PathFinder extends Application {
         FlowPane buttons = new FlowPane(hBox);
         buttons.setAlignment(Pos.TOP_CENTER);
 
-        //new map menu item event
+        //create new map | menu item event
         newMap.setOnAction(event -> {
-            NewMap();
+            CreateNewMap();
             stage.setHeight(root.getPrefHeight());
             stage.setY(0);
         });
 
-        
+        //open graph | menu item event
+        open.setOnAction(event -> {
+            //skriv en metod för att öppna kartan från europa.graph
+        });
+
+        //Save graph | menu item event
+        save.setOnAction(event -> {
+            saveGraph();
+        });
+
+        //save snapshot menu | item event
+        saveImage.setOnAction(event -> {
+            WritableImage screenShot = stage.getScene().snapshot(null);
+            File file = new File("capture.png");
+            try {
+                ImageIO.write(SwingFXUtils.fromFXImage(screenShot, null), "png", file);
+            } catch (IOException e) {
+                System.err.println("Something went wrong in Image io write");
+            }
+        });
+
+        //exit application | menu item event
+        exit.setOnAction(event -> {
+
+        });
+
+
+        //Create new place | button event
+        btnNewPlace.setOnAction(event ->{
+
+        });
 
         //set borderpane
         root.setTop(header);
@@ -85,7 +117,7 @@ public class PathFinder extends Application {
         return vBox;
     }
 
-    private void NewMap(){
+    private void CreateNewMap(){
         try{
             FileInputStream file = new FileInputStream("europa.gif");
             Image image = new Image(file);
@@ -93,8 +125,26 @@ public class PathFinder extends Application {
             root.setBottom(new FlowPane(view));
             root.prefHeightProperty().bind(image.heightProperty());
         } catch (FileNotFoundException e){
-            System.err.println("Cause of file not found exception :" + e.getCause());
+            System.err.println("Cause of file not found exception: " + e.getCause());
         }
+    }
+
+    private void saveGraph(){
+        try(
+                FileWriter file = new FileWriter("europa.graph");
+                BufferedWriter writer = new BufferedWriter(file);
+                ) {
+            //save graph in europa.graph
+
+        } catch (FileNotFoundException e) {
+            System.err.println("Cause of file not found exception: " + e.getCause());
+        } catch (IOException e) {
+            System.err.println("Cause of IO exception: " + e.getCause());
+        }
+    }
+
+    private void mapNewLocation(){
+        
     }
 
     //create custom button class
