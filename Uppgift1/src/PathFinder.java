@@ -1,17 +1,29 @@
 import javafx.application.Application;
 import javafx.embed.swing.SwingFXUtils;
+import javafx.event.Event;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
+import javafx.scene.ImageCursor;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.scene.shape.Circle;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 import javax.imageio.ImageIO;
 import java.io.*;
+import java.util.Objects;
+import java.util.Optional;
 
 public class PathFinder extends Application {
 
@@ -31,6 +43,9 @@ public class PathFinder extends Application {
     private final MenuItem save = new MenuItem("Save");
     private final MenuItem saveImage = new MenuItem("Save Image");
     private final MenuItem exit = new MenuItem("Exit");
+
+    private Image graph;
+    private ImageView view;
 
     @Override
     public void start(Stage stage) {
@@ -56,13 +71,11 @@ public class PathFinder extends Application {
 
         //open graph | menu item event
         open.setOnAction(event -> {
-            //skriv en metod för att öppna kartan från europa.graph
+            //write a method to open graph europa.graph
         });
 
         //Save graph | menu item event
-        save.setOnAction(event -> {
-            saveGraph();
-        });
+        save.setOnAction(event -> saveGraph());
 
         //save snapshot menu | item event
         saveImage.setOnAction(event -> {
@@ -83,7 +96,7 @@ public class PathFinder extends Application {
 
         //Create new place | button event
         btnNewPlace.setOnAction(event ->{
-
+            mapNewLocation();
         });
 
         //set borderpane
@@ -120,10 +133,10 @@ public class PathFinder extends Application {
     private void CreateNewMap(){
         try{
             FileInputStream file = new FileInputStream("europa.gif");
-            Image image = new Image(file);
-            ImageView view = new ImageView(image);
+            graph = new Image(file);
+            view = new ImageView(graph);
             root.setBottom(new FlowPane(view));
-            root.prefHeightProperty().bind(image.heightProperty());
+            root.prefHeightProperty().bind(graph.heightProperty());
         } catch (FileNotFoundException e){
             System.err.println("Cause of file not found exception: " + e.getCause());
         }
@@ -132,7 +145,7 @@ public class PathFinder extends Application {
     private void saveGraph(){
         try(
                 FileWriter file = new FileWriter("europa.graph");
-                BufferedWriter writer = new BufferedWriter(file);
+                BufferedWriter writer = new BufferedWriter(file)
                 ) {
             //save graph in europa.graph
 
@@ -144,7 +157,37 @@ public class PathFinder extends Application {
     }
 
     private void mapNewLocation(){
-        
+        root.getScene().setCursor(new ImageCursor(graph, graph.getWidth(), graph.getHeight()));
+        btnNewPlace.setDisable(true);
+        root.getScene().setCursor(Cursor.CROSSHAIR);
+
+        root.setOnMouseClicked(event -> {
+            String place = "";
+            if(!(place = openWindow()).isEmpty()){
+                root.getScene().setCursor(Cursor.DEFAULT);
+                btnNewPlace.setDisable(false);
+                Circle circle = new Circle(event.getX(), event.getY(), 10, Color.RED);
+                Text label = new Text(place);
+                label.setTranslateX(event.getX() + 2);
+                label.setTranslateY(event.getY() + 15);
+                label.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD,10));
+                root.getChildren().add(circle);
+                root.getChildren().add(label);
+                root.setOnMouseClicked(Event::consume);
+            }
+        });
+    }
+
+    private String openWindow(){
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Name");
+        dialog.setContentText("Name of place: ");
+        Optional<String> result = dialog.showAndWait();
+        String temp = "";
+        if(result.isPresent()){
+            temp = result.get();
+        }
+        return temp;
     }
 
     //create custom button class
