@@ -1,10 +1,13 @@
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.ImageCursor;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -18,6 +21,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import javafx.util.Pair;
 
 import javax.imageio.ImageIO;
@@ -25,7 +29,8 @@ import java.io.*;
 import java.util.*;
 
 public class PathFinder extends Application {
-    private final ListGraph<Circle> graph = new ListGraph<>();
+    private final ListGraph<String> graph = new ListGraph<>();
+    private final Map<String, Circle> locations = new HashMap<>();
     private final BorderPane root = new BorderPane();
 
     private final MenuBar menuBar = new MenuBar();
@@ -44,6 +49,7 @@ public class PathFinder extends Application {
     private final MenuItem exit = new MenuItem("Exit");
 
     private Image mapImage;
+    private boolean saved = true;
     private final List<Circle> placesClicked = new ArrayList<>();
     private final List<String> namesClicked = new ArrayList<>();
 
@@ -64,18 +70,26 @@ public class PathFinder extends Application {
 
         //create new map | menu item event
         newMap.setOnAction(event -> {
+            checkSaved();
             CreateNewMap();
+            saved = false;
             stage.setHeight(root.getPrefHeight());
             stage.setY(0);
         });
 
         //open graph | menu item event
         open.setOnAction(event -> {
-            //write a method to open graph europa.graph
+            checkSaved();
+            openGraph();
+            stage.setHeight(root.getPrefHeight());
+            stage.setY(0);
         });
 
         //Save graph | menu item event
-        save.setOnAction(event -> saveMap());
+        save.setOnAction(event ->{
+            saveMap();
+            saved = true;
+        });
 
         //save snapshot menu | item event
         saveImage.setOnAction(event -> {
@@ -90,19 +104,44 @@ public class PathFinder extends Application {
 
         //exit application | menu item event
         exit.setOnAction(event -> {
-
+            checkSaved();
         });
 
 
         //Create new place | button event
-        btnNewPlace.setOnAction(event -> mapNewLocation());
+        btnNewPlace.setOnAction(event -> {
+            mapNewLocation();
+            saved = false;
+        });
 
-        btnNewConnection.setOnAction(event -> setNewConnectionDialog());
+        btnNewConnection.setOnAction(event -> {
+            setNewConnectionDialog();
+            saved = false;
+        });
 
         btnShowConnection.setOnAction(event -> {
             if(placesClicked.size() == 2)
                 connectionBox(false, false);
         });
+
+        btnChangeConnection.setOnAction(event -> {
+            if(placesClicked.size() == 2) {
+                connectionBox(false, true);
+                saved = false;
+            }
+        });
+
+        btnFindPath.setOnAction(event -> {
+            if(placesClicked.size() == 2)
+                findPath();
+            else{
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setHeaderText("Press two locations");
+                alert.show();
+            }
+        });
+
+
 
         //set borderpane
         root.setTop(header);
@@ -113,6 +152,7 @@ public class PathFinder extends Application {
         stage.setTitle("PathFinder");
         stage.setScene(scene);
         stage.show();
+        scene.getWindow().addEventFilter(WindowEvent.WINDOW_CLOSE_REQUEST, this::closeWindowEvent);
     }
 
     private VBox setMenuBar(MenuBar menuBar){
@@ -155,7 +195,13 @@ public class PathFinder extends Application {
                 BufferedWriter writer = new BufferedWriter(file)
                 ) {
             //save graph in europa.graph
-
+            writer.write("file:europa.graph");
+            writer.newLine();
+            for(String key : locations.keySet()){
+                writer.write(key + ";" + locations.get(key).getCenterX() + ";" + locations.get(key).getCenterY() + ";");
+            }
+            writer.newLine();
+            writer.write(graph.toString());
         } catch (FileNotFoundException e) {
             System.err.println("Cause of file not found exception: " + e.getCause());
         } catch (IOException e) {
@@ -173,28 +219,7 @@ public class PathFinder extends Application {
         root.setOnMouseClicked(event -> {
             String place = "";
             if(!(place = openWindow()).isEmpty()){
-                Circle circle = new Circle(event.getX(), event.getY(), 10, Color.RED);
-                Text label = new Text(place);
-                label.setTranslateX(event.getX() + 2);
-                label.setTranslateY(event.getY() + 15);
-                label.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD,10));
-                root.getChildren().add(circle);
-                root.getChildren().add(label);
-                graph.add(circle);
-
-                //mouse click event on circles/places
-                circle.setOnMouseClicked(e -> {
-                    if(placesClicked.contains(circle)){
-                        placesClicked.remove(circle);
-                        namesClicked.remove(label.getText());
-                        circle.setFill(Color.RED);
-                    }
-                    else if(!(placesClicked.size() == 2)){
-                        placesClicked.add(circle);
-                        namesClicked.add(label.getText());
-                        circle.setFill(Color.BLUE);
-                    }
-                });
+                createCircle(event.getX(), event.getY(), place);
             }
             btnNewPlace.setDisable(false);
             root.getScene().setCursor(Cursor.DEFAULT);
@@ -216,7 +241,7 @@ public class PathFinder extends Application {
     private void setNewConnection(Pair<String, String> pair){
         String nameText = pair.getKey();
         String timeText = pair.getValue();
-        graph.connect(placesClicked.getFirst(), placesClicked.getLast(), nameText, Integer.parseInt(timeText));
+        graph.connect(namesClicked.getFirst(), namesClicked.getLast(), nameText, Integer.parseInt(timeText));
         Line connection = new Line();
         connection.setStartX(placesClicked.getFirst().getCenterX());
         connection.setStartY(placesClicked.getFirst().getCenterY());
@@ -224,12 +249,6 @@ public class PathFinder extends Application {
         connection.setEndY(placesClicked.getLast().getCenterY());
         connection.setStroke(Color.BLACK);
         connection.setStrokeWidth(4);
-        placesClicked.getFirst().setFill(Color.RED);
-        placesClicked.getLast().setFill(Color.RED);
-        placesClicked.removeFirst();
-        placesClicked.removeLast();
-        namesClicked.removeFirst();
-        namesClicked.removeLast();
 
         root.getChildren().add(connection);
     }
@@ -237,6 +256,7 @@ public class PathFinder extends Application {
     //opens text dialog for naming new place
     private String openWindow(){
         TextInputDialog dialog = new TextInputDialog();
+        dialog.setHeaderText("");
         dialog.setTitle("Name");
         dialog.setContentText("Name of place: ");
         Optional<String> result = dialog.showAndWait();
@@ -266,7 +286,7 @@ public class PathFinder extends Application {
         Dialog<Pair<String, String>> dialog = new Dialog<>();
         dialog.setTitle("Connection");
 
-        Edge<Circle> edge = graph.getEdgeBetween(placesClicked.getFirst(), placesClicked.getLast());
+        Edge<String> edge = graph.getEdgeBetween(namesClicked.getFirst(), namesClicked.getLast());
         if(edge != null){
             transportation = edge.getName();
             transportationTime = Integer.toString(edge.getWeight());
@@ -307,10 +327,133 @@ public class PathFinder extends Application {
             }
             return null;
         });
-        if(!graph.pathExists(placesClicked.getFirst(), placesClicked.getLast()))
+
+        if(!graph.pathExists(namesClicked.getFirst(), namesClicked.getLast()))
             dialog.showAndWait().ifPresent(this::setNewConnection);
         else
             dialog.show();
+
+        resetCircles();
+    }
+
+    private void resetCircles(){
+        placesClicked.getFirst().setFill(Color.RED);
+        placesClicked.getLast().setFill(Color.RED);
+        placesClicked.removeFirst();
+        placesClicked.removeLast();
+        namesClicked.removeFirst();
+        namesClicked.removeLast();
+    }
+
+    private void findPath(){
+        Alert box = new Alert(Alert.AlertType.INFORMATION);
+        box.setHeaderText("The path from " + namesClicked.getFirst() + " to " + namesClicked.getLast() + ":");
+        String context = "";
+        int total = 0;
+        for(Edge<String> edge : graph.getPath(namesClicked.getFirst(), namesClicked.getLast())){
+            context += edge.toString() + "\n";
+            total += edge.getWeight();
+        }
+        box.setContentText(context + "\nTotal: " + total);
+        box.show();
+    }
+
+    private void openGraph() {
+        CreateNewMap();
+        try {
+            FileReader rd = new FileReader("europa.graph");
+            BufferedReader reader = new BufferedReader(rd);
+            reader.readLine();
+
+            String[] nodes = reader.readLine().split(";");
+            for (int i = 0; i < nodes.length; i += 3) {
+
+                String name = nodes[i];
+                double coordinate1 = Double.parseDouble(nodes[i + 1]);
+                double coordinate2 = Double.parseDouble(nodes[i + 2]);
+
+                createCircle(coordinate1, coordinate2, name);
+            }
+
+            String read;
+            while((read = reader.readLine()) != null){
+                String[] items = read.split(";");
+                String from = items[0];
+                String destination = items[1];
+                String transportation = items[2];
+                int distance = Integer.parseInt(items[3]);
+                if(graph.getEdgeBetween(from, destination) == null)
+                    graph.connect(from, destination, transportation, distance);
+            }
+            reader.close();
+            rd.close();
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void createCircle (double x, double y, String name){
+        Circle circle = new Circle(x, y, 10, Color.RED);
+        Text label = new Text(name);
+        label.setTranslateX(x + 2);
+        label.setTranslateY(y + 15);
+        label.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD,10));
+        root.getChildren().add(circle);
+        root.getChildren().add(label);
+        graph.add(name);
+        locations.put(name, circle);
+
+        //mouse click event on circles/places
+        circle.setOnMouseClicked(e -> {
+            if(placesClicked.contains(circle)){
+                placesClicked.remove(circle);
+                namesClicked.remove(label.getText());
+                circle.setFill(Color.RED);
+            }
+            else if(!(placesClicked.size() == 2)){
+                placesClicked.add(circle);
+                namesClicked.add(label.getText());
+                circle.setFill(Color.BLUE);
+            }
+        });
+    }
+
+    private boolean checkSaved(){
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Warning!");
+        alert.setHeaderText("Unsaved changes, continue anyway?");
+        //if ok, delete contents of file. close alert
+        //if cancel, keep everything and close alert
+        if(!saved){
+            Optional<ButtonType> result = alert.showAndWait();
+            if(result.get() == ButtonType.OK){
+                saved = true;
+                return true;
+            }
+            return false;
+        }
+        return true;
+    }
+
+    private void deleteFile(){
+        try{
+            new FileWriter("europa.graph", false).close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void closeWindowEvent(WindowEvent event){
+        if(checkSaved()){
+            deleteFile();
+        } else {
+            event.consume();
+        }
     }
 
 }

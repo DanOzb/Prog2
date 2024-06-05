@@ -230,11 +230,10 @@ public class ListGraph<T> implements Graph<T>, Serializable{
     public String toString(){
         String nodeText = ""; 
         for(T node  : nodes){
-            nodeText += node.toString() + ": \n";
             for(Edge<T> edge : adjacencyList.get(nodes.indexOf(node))){
-                nodeText += edge.toString() + "\n";
+                nodeText += node.toString() + ";";
+                nodeText += edge.getDestination() + ";" + edge.getName() + ";" + edge.getWeight() + "\n";
             }
-            nodeText += "\n \n";
         }
         return nodeText;
     }
