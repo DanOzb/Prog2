@@ -1,2 +1,6 @@
 file:europa.graph
-
+Sweden;471.3333333333333;299.3333333333333;Denmark;370.6666666666667;358.6666666666667;iceland;145.33333333333334;109.33333333333333;norway;354.6666666666667;305.3333333333333;
+iceland;norway;boat;5
+Denmark;Sweden;Plane;1
+Sweden;Denmark;Plane;1
+norway;iceland;boat;5

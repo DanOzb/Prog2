@@ -27,7 +27,7 @@ import java.util.*;
 
 public class PathFinder extends Application {
     private ListGraph<String> graph = new ListGraph<>();
-    private final Map<String, Circle> locations = new HashMap<>();
+    private final Map<Text, Circle> locations = new HashMap<>();
     private final BorderPane root = new BorderPane();
 
     private final MenuBar menuBar = new MenuBar();
@@ -73,6 +73,7 @@ public class PathFinder extends Application {
 
         FlowPane header = new FlowPane(vbox);
         header.setAlignment(Pos.TOP_LEFT);
+        header.setMinWidth(600);
 
         //buttons pane
         HBox hbox = new HBox(btnFindPath, btnShowConnection, btnNewPlace, btnNewConnection, btnChangeConnection);
@@ -82,21 +83,21 @@ public class PathFinder extends Application {
 
         //create new map | menu item event
         newMap.setOnAction(event -> {
-            saved = false;
-            if(checkSaved()){
-                createNewMap();
-                saveMap();
-                stage.setHeight(root.getPrefHeight());
-                stage.setY(0);
-            }
+            root.setBottom(view);
+            root.prefHeightProperty().bind(mapImage.heightProperty());
+            stage.setHeight(root.getPrefHeight());
+            stage.setY(0);
+            createNewMap();
+
         });
 
         //open graph | menu item event
         open.setOnAction(event -> {
-            checkSaved();
-            openGraph();
+            root.setBottom(view);
+            root.prefHeightProperty().bind(mapImage.heightProperty());
             stage.setHeight(root.getPrefHeight());
             stage.setY(0);
+            openGraph();
         });
 
         //Save graph | menu item event
@@ -118,7 +119,9 @@ public class PathFinder extends Application {
 
         //exit application | menu item event
         exit.setOnAction(event -> {
-            stage.fireEvent(new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST));
+            if(!checkSaved()){
+                stage.fireEvent(new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST));
+            }
         });
 
 
@@ -139,9 +142,15 @@ public class PathFinder extends Application {
         });
 
         btnChangeConnection.setOnAction(event -> {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
             if(placesClicked.size() == 2) {
-                connectionBox(false, true);
-                saved = false;
+                if(graph.getEdgeBetween(namesClicked.get(0), namesClicked.get(1)) == null){
+                    alert.show();
+                } else {
+                    connectionBox(false, true);
+                }
+            } else {
+                alert.show();
             }
         });
 
@@ -160,13 +169,14 @@ public class PathFinder extends Application {
         //set borderpane
         root.setTop(header);
         root.setCenter(buttons);
-        root.setBottom(view);
+        root.prefWidthProperty().bind(header.widthProperty());
 
         //set scene
         Scene scene = new Scene(root);
         stage.setTitle("PathFinder");
         stage.setScene(scene);
         stage.show();
+
         scene.getWindow().addEventFilter(WindowEvent.WINDOW_CLOSE_REQUEST, this::closeWindowEvent);
     }
 
@@ -186,7 +196,11 @@ public class PathFinder extends Application {
         for(String node : graph.getNodes()){
             graph.remove(node);
         }
-        root.prefHeightProperty().bind(mapImage.heightProperty());
+        for(Map.Entry<Text, Circle> circle : locations.entrySet()){
+            root.getChildren().remove(circle.getKey());
+            root.getChildren().remove(circle.getValue());
+        }
+        locations.clear();
     }
 
     //saves map | not done
@@ -198,8 +212,8 @@ public class PathFinder extends Application {
             //save graph in europa.graph
             writer.write("file:europa.graph");
             writer.newLine();
-            for(String key : locations.keySet()){
-                writer.write(key + ";" + locations.get(key).getCenterX() + ";" + locations.get(key).getCenterY() + ";");
+            for(Text key : locations.keySet()){
+                writer.write(key.getText() + ";" + locations.get(key).getCenterX() + ";" + locations.get(key).getCenterY() + ";");
             }
             writer.newLine();
             String graphText = graph.toString();
@@ -210,14 +224,16 @@ public class PathFinder extends Application {
                 if(items.length > 0){
                     String node = items[0];
                     for(int i = 1; i < items.length; i++){
+                        //System.out.println(Arrays.toString(items[i].split(" ")));
                         String destination = items[i].split(" ")[1];
+                        String transportation = items[i].split(" ")[3];
                         String weight = items[i].split(" ")[5];
-                        fileText += node + ";" + destination + ";" + weight + "\n";
+                        fileText += node + ";" + destination + ";" + transportation + ";" + weight + "\n";
                     }
                 }
-                writer.write(fileText);
-                writer.close();
             }
+            writer.write(fileText);
+            writer.close();
         } catch (FileNotFoundException e) {
             System.err.println("Cause of file not found exception: " + e.getCause());
         } catch (IOException e) {
@@ -249,7 +265,6 @@ public class PathFinder extends Application {
         if (placesClicked.size() == 2) {
             connectionBox(true, true);
         } else {
-            //customize later
             alert.show();
         }
     }
@@ -257,16 +272,21 @@ public class PathFinder extends Application {
     private void setNewConnection(Pair<String, String> pair){
         String nameText = pair.getKey();
         String timeText = pair.getValue();
-        graph.connect(namesClicked.get(0), namesClicked.get(1), nameText, Integer.parseInt(timeText));
+        if(graph.pathExists(namesClicked.get(0), namesClicked.get(1))){
+            graph.setConnectionWeight(namesClicked.get(0), namesClicked.get(1), Integer.parseInt(timeText));
+        } else {
+            graph.connect(namesClicked.get(0), namesClicked.get(1), nameText, Integer.parseInt(timeText));
+        }
         Line connection = new Line();
         connection.setStartX(placesClicked.get(0).getCenterX());
-        connection.setStartY(placesClicked.get(1).getCenterY());
-        connection.setEndX(placesClicked.get(0).getCenterX());
+        connection.setStartY(placesClicked.get(0).getCenterY());
+        connection.setEndX(placesClicked.get(1).getCenterX());
         connection.setEndY(placesClicked.get(1).getCenterY());
         connection.setStroke(Color.BLACK);
         connection.setStrokeWidth(4);
 
         root.getChildren().add(connection);
+        saved = false;
     }
 
     //opens text dialog for naming new place
@@ -342,22 +362,10 @@ public class PathFinder extends Application {
             }
             return null;
         });
-
-        if(!graph.pathExists(namesClicked.get(0), namesClicked.get(1)))
+        if(nameEnable || timeEnable)
             dialog.showAndWait().ifPresent(this::setNewConnection);
         else
             dialog.show();
-
-        resetCircles();
-    }
-
-    private void resetCircles(){
-        placesClicked.get(0).setFill(Color.RED);
-        placesClicked.get(1).setFill(Color.RED);
-        placesClicked.remove(0);
-        placesClicked.remove(1);
-        namesClicked.remove(0);
-        namesClicked.remove(1);
     }
 
     private void findPath(){
@@ -397,8 +405,23 @@ public class PathFinder extends Application {
                 String destination = items[1];
                 String transportation = items[2];
                 int distance = Integer.parseInt(items[3]);
-                if(graph.getEdgeBetween(from, destination) == null)
+                if(graph.getEdgeBetween(from, destination) == null) {
                     graph.connect(from, destination, transportation, distance);
+                    Line connection = new Line();
+                    connection.setStroke(Color.BLACK);
+                    connection.setStrokeWidth(4);
+
+                    for(Map.Entry<Text, Circle> circles : locations.entrySet()){
+                        if(circles.getKey().getText().equals(from)){
+                            connection.setStartX(circles.getValue().getCenterX());
+                            connection.setStartY(circles.getValue().getCenterY());
+                        } else if(circles.getKey().getText().equals(destination)){
+                            connection.setEndX(circles.getValue().getCenterX());
+                            connection.setEndY(circles.getValue().getCenterY());
+                        }
+                    }
+                    root.getChildren().add(connection);
+                }
             }
             reader.close();
             rd.close();
@@ -412,8 +435,9 @@ public class PathFinder extends Application {
     }
 
     private void createCircle (double x, double y, String name){
-        Circle circle = new Circle(x, y, 10, Color.RED);
-        Text label = new Text(name);
+        Circle circle = new Circle(x, y, 10, Color.BLUE);
+        Text label = new Text();
+        label.setText(name);
         label.setTranslateX(x + 2);
         label.setTranslateY(y + 15);
         label.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD,10));
@@ -421,19 +445,19 @@ public class PathFinder extends Application {
         root.getChildren().add(circle);
         root.getChildren().add(label);
         graph.add(name);
-        locations.put(name, circle);
+        locations.put(label, circle);
 
         //mouse click event on circles/places
         circle.setOnMouseClicked(e -> {
             if(placesClicked.contains(circle)){
                 placesClicked.remove(circle);
                 namesClicked.remove(label.getText());
-                circle.setFill(Color.RED);
+                circle.setFill(Color.BLUE);
             }
             else if(!(placesClicked.size() == 2)){
                 placesClicked.add(circle);
                 namesClicked.add(label.getText());
-                circle.setFill(Color.BLUE);
+                circle.setFill(Color.RED);
             }
         });
     }
@@ -447,10 +471,10 @@ public class PathFinder extends Application {
         if(!saved){
             Optional<ButtonType> result = alert.showAndWait();
             if(result.get() == ButtonType.OK){
-                saved = true;
                 return true;
+            } else{
+                return false;
             }
-            return false;
         }
         return true;
     }
