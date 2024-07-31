@@ -29,6 +29,7 @@ public class PathFinder extends Application {
     private ListGraph<String> graph = new ListGraph<>();
     private final Map<Text, Circle> locations = new HashMap<>();
     private final BorderPane root = new BorderPane();
+    private final DialogPane dialogPane = new DialogPane();
 
     private final MenuBar menuBar = new MenuBar();
 
@@ -83,7 +84,7 @@ public class PathFinder extends Application {
 
         //create new map | menu item event
         newMap.setOnAction(event -> {
-            root.setBottom(view);
+            view.setImage(mapImage);
             root.prefHeightProperty().bind(mapImage.heightProperty());
             stage.setHeight(root.getPrefHeight());
             stage.setY(0);
@@ -93,7 +94,7 @@ public class PathFinder extends Application {
 
         //open graph | menu item event
         open.setOnAction(event -> {
-            root.setBottom(view);
+            view.setImage(mapImage);
             root.prefHeightProperty().bind(mapImage.heightProperty());
             stage.setHeight(root.getPrefHeight());
             stage.setY(0);
@@ -164,11 +165,11 @@ public class PathFinder extends Application {
             }
         });
 
-
-
         //set borderpane
         root.setTop(header);
         root.setCenter(buttons);
+        view.setImage(null);
+        root.setBottom(view);
         root.prefWidthProperty().bind(header.widthProperty());
 
         //set scene
@@ -291,16 +292,22 @@ public class PathFinder extends Application {
 
     //opens text dialog for naming new place
     private String openWindow(){
-        TextInputDialog dialog = new TextInputDialog();
-        dialog.setHeaderText("");
-        dialog.setTitle("Name");
-        dialog.setContentText("Name of place: ");
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("Name of place:");
+
+        dialogPane.setPadding(new Insets(20, 150, 10, 10));
+        TextField nameField = new TextField();
+        nameField.setPromptText("Name of place");
+        dialog.setDialogPane(dialogPane);
+        dialogPane.setContent(nameField);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
         Optional<String> result = dialog.showAndWait();
-        String temp = "";
         if(result.isPresent()){
-            temp = result.get();
+            return nameField.getText();
+        } else {
+            return "";
         }
-        return temp;
     }
 
     //create custom button class
@@ -332,6 +339,7 @@ public class PathFinder extends Application {
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
         GridPane gridPane = new GridPane();
+        root.getChildren().add(gridPane);
         gridPane.setHgap(10);
         gridPane.setVgap(10);
         gridPane.setPadding(new Insets(20, 150, 10, 10));
@@ -470,11 +478,7 @@ public class PathFinder extends Application {
         //if cancel, keep everything and close alert
         if(!saved){
             Optional<ButtonType> result = alert.showAndWait();
-            if(result.get() == ButtonType.OK){
-                return true;
-            } else{
-                return false;
-            }
+            return result.get() == ButtonType.OK;
         }
         return true;
     }
