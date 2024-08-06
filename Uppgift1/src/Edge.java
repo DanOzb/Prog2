@@ -37,6 +37,6 @@ public class Edge<T> implements Serializable {
 
     public String toString(){
         //vpl wants it this way
-        return String.format("till %s med %s tar %d", destination, name, weight);
+        return String.format("to %s by %s takes %d", destination, name, weight);
     }
 }

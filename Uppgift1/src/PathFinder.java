@@ -19,17 +19,18 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-import javafx.util.Pair;
 
 import javax.imageio.ImageIO;
 import java.io.*;
 import java.util.*;
 
+//ändrade graph från string till location.
+//i vpl: node2 blir klickad istället för node1
+
 public class PathFinder extends Application {
-    private ListGraph<String> graph = new ListGraph<>();
-    private final Map<Text, Circle> locations = new HashMap<>();
+    private final ListGraph<Location> graph = new ListGraph<>();
     private final BorderPane root = new BorderPane();
-    private final DialogPane dialogPane = new DialogPane();
+    private final Pane field = new Pane();
 
     private final MenuBar menuBar = new MenuBar();
 
@@ -46,15 +47,14 @@ public class PathFinder extends Application {
     private final MenuItem saveImage = new MenuItem("Save Image");
     private final MenuItem exit = new MenuItem("Exit");
 
-    private final Image mapImage = new Image("file:europa.gif");
+    private Image mapImage = new Image("file:europa.gif");
     private final ImageView view = new ImageView(mapImage);
     private boolean saved = true;
-    private final List<Circle> placesClicked = new ArrayList<>();
-    private final List<String> namesClicked = new ArrayList<>();
+    private final List<Location> placesClicked = new LinkedList<>();
 
     @Override
     public void start(Stage stage) {
-        root.setId("outputArea");
+        field.setId("outputArea");
         menuBar.setId("menu");
         menu.setId("menuFile");
         newMap.setId("menuNewMap");
@@ -83,18 +83,20 @@ public class PathFinder extends Application {
         buttons.setAlignment(Pos.TOP_CENTER);
 
         //create new map | menu item event
-        newMap.setOnAction(event -> {
-            view.setImage(mapImage);
+        newMap.setOnAction(e -> {
+            if(view.getImage() != null)
+                saved = false;
             root.prefHeightProperty().bind(mapImage.heightProperty());
             stage.setHeight(root.getPrefHeight());
             stage.setY(0);
-            createNewMap();
-
+            clearMap();
+            view.setImage(mapImage);
+            field.getChildren().add(view);
+            saved = false;
         });
 
         //open graph | menu item event
-        open.setOnAction(event -> {
-            view.setImage(mapImage);
+        open.setOnAction(e -> {
             root.prefHeightProperty().bind(mapImage.heightProperty());
             stage.setHeight(root.getPrefHeight());
             stage.setY(0);
@@ -102,9 +104,8 @@ public class PathFinder extends Application {
         });
 
         //Save graph | menu item event
-        save.setOnAction(event ->{
+        save.setOnAction(e ->{
             saveMap();
-            saved = true;
         });
 
         //save snapshot menu | item event
@@ -119,33 +120,25 @@ public class PathFinder extends Application {
         });
 
         //exit application | menu item event
-        exit.setOnAction(event -> {
-            if(!checkSaved()){
-                stage.fireEvent(new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST));
-            }
+        exit.setOnAction(e -> {
+            stage.fireEvent(new WindowEvent(stage, WindowEvent.WINDOW_CLOSE_REQUEST));
         });
 
 
         //Create new place | button event
-        btnNewPlace.setOnAction(event -> {
-            mapNewLocation();
-            saved = false;
-        });
+        btnNewPlace.setOnAction(e -> mapNewLocation());
 
-        btnNewConnection.setOnAction(event -> {
-            setNewConnectionDialog();
-            saved = false;
-        });
+        btnNewConnection.setOnAction(e -> setNewConnectionDialog());
 
-        btnShowConnection.setOnAction(event -> {
+        btnShowConnection.setOnAction(e -> {
             if(placesClicked.size() == 2)
                 connectionBox(false, false);
         });
 
-        btnChangeConnection.setOnAction(event -> {
+        btnChangeConnection.setOnAction(e -> {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             if(placesClicked.size() == 2) {
-                if(graph.getEdgeBetween(namesClicked.get(0), namesClicked.get(1)) == null){
+                if(graph.getEdgeBetween(placesClicked.get(0), placesClicked.get(1)) == null){
                     alert.show();
                 } else {
                     connectionBox(false, true);
@@ -155,7 +148,7 @@ public class PathFinder extends Application {
             }
         });
 
-        btnFindPath.setOnAction(event -> {
+        btnFindPath.setOnAction(e -> {
             if(placesClicked.size() == 2)
                 findPath();
             else{
@@ -165,11 +158,14 @@ public class PathFinder extends Application {
             }
         });
 
+        //output area
+        field.getChildren().add(view);
+
         //set borderpane
         root.setTop(header);
         root.setCenter(buttons);
         view.setImage(null);
-        root.setBottom(view);
+        root.setBottom(field);
         root.prefWidthProperty().bind(header.widthProperty());
 
         //set scene
@@ -193,15 +189,14 @@ public class PathFinder extends Application {
     }
 
     //creates new map/image
-    private void createNewMap() {
-        for(String node : graph.getNodes()){
-            graph.remove(node);
+    private void clearMap() {
+        if(checkSaved()){
+            for(Location node : graph.getNodes()){
+                graph.remove(node);
+            }
+            field.getChildren().clear();
+            placesClicked.clear();
         }
-        for(Map.Entry<Text, Circle> circle : locations.entrySet()){
-            root.getChildren().remove(circle.getKey());
-            root.getChildren().remove(circle.getValue());
-        }
-        locations.clear();
     }
 
     //saves map | not done
@@ -211,14 +206,14 @@ public class PathFinder extends Application {
                 BufferedWriter writer = new BufferedWriter(file)
                 ) {
             //save graph in europa.graph
-            writer.write("file:europa.graph");
+            writer.write(mapImage.getUrl());
             writer.newLine();
-            for(Text key : locations.keySet()){
-                writer.write(key.getText() + ";" + locations.get(key).getCenterX() + ";" + locations.get(key).getCenterY() + ";");
+            for(Location node : graph.getNodes()){
+                writer.write(node.toString() + ";" + node.getCenterX() + ";" + node.getCenterY() + ";");
             }
             writer.newLine();
             String graphText = graph.toString();
-            String fileText = "";
+            StringBuilder fileText = new StringBuilder();
             Scanner scanner = new Scanner(graphText);
             while(scanner.hasNextLine()){
                 String[] items = scanner.nextLine().split(";");
@@ -229,12 +224,11 @@ public class PathFinder extends Application {
                         String destination = items[i].split(" ")[1];
                         String transportation = items[i].split(" ")[3];
                         String weight = items[i].split(" ")[5];
-                        fileText += node + ";" + destination + ";" + transportation + ";" + weight + "\n";
+                        fileText.append(node).append(";").append(destination).append(";").append(transportation).append(";").append(weight).append("\n");
                     }
                 }
             }
-            writer.write(fileText);
-            writer.close();
+            writer.write(fileText.toString());
         } catch (FileNotFoundException e) {
             System.err.println("Cause of file not found exception: " + e.getCause());
         } catch (IOException e) {
@@ -244,19 +238,20 @@ public class PathFinder extends Application {
 
     //maps new location in graph image | not done (check if circles are connected)
     private void mapNewLocation(){
-        root.getScene().setCursor(new ImageCursor(mapImage, mapImage.getWidth(), mapImage.getHeight()));
+        field.getScene().setCursor(new ImageCursor(mapImage, mapImage.getWidth(), mapImage.getHeight()));
         btnNewPlace.setDisable(true);
-        root.getScene().setCursor(Cursor.CROSSHAIR);
+        field.getScene().setCursor(Cursor.CROSSHAIR);
 
         //mouse click event on root pane
-        root.setOnMouseClicked(event -> {
-            String place = "";
+        field.setOnMouseClicked(event -> {
+            String place;
             if(!(place = openWindow()).isEmpty()){
-                createCircle(event.getX(), event.getY(), place);
+                //System.out.println(place);
+                createLocation(event.getX(), event.getY(), place);
             }
             btnNewPlace.setDisable(false);
-            root.getScene().setCursor(Cursor.DEFAULT);
-            root.setOnMouseClicked(Event::consume);
+            field.getScene().setCursor(Cursor.DEFAULT);
+            field.setOnMouseClicked(Event::consume);
         });
     }
 
@@ -264,48 +259,67 @@ public class PathFinder extends Application {
     private void setNewConnectionDialog(){
         Alert alert = new Alert(Alert.AlertType.ERROR);
         if (placesClicked.size() == 2) {
-            connectionBox(true, true);
+            if(graph.getEdgeBetween(placesClicked.get(0), placesClicked.get(1)) != null){
+                alert.setHeaderText("There is already a connection between the selected places!!");
+                alert.show();
+            } else{
+                connectionBox(true, true);
+            }
         } else {
+            alert.setHeaderText("Two places must be selected!!");
             alert.show();
         }
     }
 
-    private void setNewConnection(Pair<String, String> pair){
-        String nameText = pair.getKey();
-        String timeText = pair.getValue();
-        if(graph.pathExists(namesClicked.get(0), namesClicked.get(1))){
-            graph.setConnectionWeight(namesClicked.get(0), namesClicked.get(1), Integer.parseInt(timeText));
+    private void setConnection(String nameText, String timeText, boolean newPlace){
+        if(nameText.isEmpty()){
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setHeaderText("Name can not be empty");
+            alert.show();
+        } else if(!timeText.matches("-?\\d+")){
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setHeaderText("Time must be a number");
+            alert.show();
         } else {
-            graph.connect(namesClicked.get(0), namesClicked.get(1), nameText, Integer.parseInt(timeText));
-        }
-        Line connection = new Line();
-        connection.setStartX(placesClicked.get(0).getCenterX());
-        connection.setStartY(placesClicked.get(0).getCenterY());
-        connection.setEndX(placesClicked.get(1).getCenterX());
-        connection.setEndY(placesClicked.get(1).getCenterY());
-        connection.setStroke(Color.BLACK);
-        connection.setStrokeWidth(4);
+            if(newPlace){
+                if(graph.getEdgeBetween(placesClicked.get(0), placesClicked.get(1)) == null){
+                    //om new connection vald och det inte finns en connection
+                    graph.connect(placesClicked.get(0), placesClicked.get(1), nameText, Integer.parseInt(timeText));
 
-        root.getChildren().add(connection);
-        saved = false;
+                    double startX = placesClicked.get(0).getCenterX();
+                    double startY = placesClicked.get(0).getCenterY();
+                    double endX = placesClicked.get(1).getCenterX();
+                    double endY = placesClicked.get(1).getCenterY();
+                    createLine(startX, startY, endX, endY);
+                }
+            } else{
+                //om change connection vald
+                if(graph.getEdgeBetween(placesClicked.get(0), placesClicked.get(1)) != null){
+                    graph.setConnectionWeight(placesClicked.get(0), placesClicked.get(1), Integer.parseInt(timeText));
+                }
+            }
+        }
     }
 
     //opens text dialog for naming new place
     private String openWindow(){
-        Dialog<String> dialog = new Dialog<>();
-        dialog.setTitle("Name of place:");
+        Dialog<ButtonType> dialog = new Dialog<>();
+        javafx.scene.control.TextField nameField = new javafx.scene.control.TextField();
 
-        dialogPane.setPadding(new Insets(20, 150, 10, 10));
-        TextField nameField = new TextField();
-        nameField.setPromptText("Name of place");
-        dialog.setDialogPane(dialogPane);
-        dialogPane.setContent(nameField);
+        dialog.getDialogPane().getChildren().add(nameField);
+        dialog.getDialogPane().setContent(nameField);
+        dialog.setTitle("Name");
+        dialog.setHeaderText("Name of place:");
+        dialog.getDialogPane().setPadding(new Insets(20, 150, 10, 10));
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
-        Optional<String> result = dialog.showAndWait();
+        //System.out.println(dialog.getDialogPane().getChildrenUnmodifiable());
+        Optional<ButtonType> result = dialog.showAndWait();
         if(result.isPresent()){
+            dialog.close();
             return nameField.getText();
         } else {
+            dialog.close();
             return "";
         }
     }
@@ -325,16 +339,17 @@ public class PathFinder extends Application {
         String transportation = "";
         String transportationTime = "";
 
-        Dialog<Pair<String, String>> dialog = new Dialog<>();
+        Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Connection");
 
-        Edge<String> edge = graph.getEdgeBetween(namesClicked.get(0), namesClicked.get(1));
+        Edge<Location> edge = graph.getEdgeBetween(placesClicked.get(0), placesClicked.get(1));
         if(edge != null){
             transportation = edge.getName();
             transportationTime = Integer.toString(edge.getWeight());
         }
 
-        dialog.setHeaderText("Connection from " + namesClicked.get(0)+ " to " + namesClicked.get(1));
+        dialog.setHeaderText("Connection from " + placesClicked
+                .get(0).name+ " to " + placesClicked.get(1).name);
 
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
@@ -362,39 +377,35 @@ public class PathFinder extends Application {
 
         dialog.getDialogPane().setContent(gridPane);
 
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == ButtonType.OK) {
-                nameField.getText();
-                timeField.getText();
-                return new Pair<>(nameField.getText(), timeField.getText());
-            }
-            return null;
-        });
-        if(nameEnable || timeEnable)
-            dialog.showAndWait().ifPresent(this::setNewConnection);
+        boolean newPlace = nameEnable && timeEnable;
+        //om change connection vald eller new connection annars visa tid och transportation
+        if(timeEnable)
+            dialog.showAndWait().ifPresent(e -> setConnection(nameField.getText(), timeField.getText(), newPlace));
         else
             dialog.show();
     }
 
     private void findPath(){
         Alert box = new Alert(Alert.AlertType.INFORMATION);
-        box.setHeaderText("The path from " + namesClicked.get(0) + " to " + namesClicked.get(1) + ":");
-        String context = "";
+        box.setHeaderText("The path from " + placesClicked.get(0).name + " to " + placesClicked.get(1).name + ":");
+        StringBuilder context = new StringBuilder();
         int total = 0;
-        for(Edge<String> edge : graph.getPath(namesClicked.get(0), namesClicked.get(1))){
-            context += edge.toString() + "\n";
+        for(Edge<Location> edge : graph.getPath(placesClicked.get(0), placesClicked.get(1))){
+            context.append(edge.toString()).append("\n");
             total += edge.getWeight();
         }
-        box.setContentText(context + "\nTotal: " + total);
+        box.setContentText(context + "Total: " + total);
         box.show();
     }
 
     private void openGraph() {
-        createNewMap();
+        clearMap();
         try {
             FileReader rd = new FileReader("europa.graph");
             BufferedReader reader = new BufferedReader(rd);
-            reader.readLine();
+            mapImage = new Image(reader.readLine());
+            view.setImage(mapImage);
+            field.getChildren().add(view);
 
             String[] nodes = reader.readLine().split(";");
             for (int i = 0; i < nodes.length; i += 3) {
@@ -402,82 +413,97 @@ public class PathFinder extends Application {
                 String name = nodes[i];
                 double coordinate1 = Double.parseDouble(nodes[i + 1]);
                 double coordinate2 = Double.parseDouble(nodes[i + 2]);
-
-                createCircle(coordinate1, coordinate2, name);
+                createLocation(coordinate1, coordinate2, name);
             }
 
             String read;
+            double startX = 0;
+            double startY = 0;
+            double endX = 0;
+            double endY = 0;
             while((read = reader.readLine()) != null){
                 String[] items = read.split(";");
                 String from = items[0];
                 String destination = items[1];
                 String transportation = items[2];
                 int distance = Integer.parseInt(items[3]);
-                if(graph.getEdgeBetween(from, destination) == null) {
-                    graph.connect(from, destination, transportation, distance);
-                    Line connection = new Line();
-                    connection.setStroke(Color.BLACK);
-                    connection.setStrokeWidth(4);
 
-                    for(Map.Entry<Text, Circle> circles : locations.entrySet()){
-                        if(circles.getKey().getText().equals(from)){
-                            connection.setStartX(circles.getValue().getCenterX());
-                            connection.setStartY(circles.getValue().getCenterY());
-                        } else if(circles.getKey().getText().equals(destination)){
-                            connection.setEndX(circles.getValue().getCenterX());
-                            connection.setEndY(circles.getValue().getCenterY());
-                        }
-                    }
-                    root.getChildren().add(connection);
+                Location node1 = checkLocationExists(from);
+                Location node2 = checkLocationExists(destination);
+
+                if(graph.getEdgeBetween(node1, node2) == null) {
+                    graph.connect(node1, node2, transportation, distance);
+
+                    startX = node1.getCenterX();
+                    startY = node1.getCenterY();
+                    endX = node2.getCenterX();
+                    endY = node2.getCenterY();
+                    createLine(startX, startY, endX, endY);
                 }
             }
             reader.close();
             rd.close();
 
         } catch (FileNotFoundException e) {
+            System.err.println("File not found at");
             e.printStackTrace();
         } catch (IOException e) {
+            System.err.println("Error reading file");
             e.printStackTrace();
         }
 
     }
 
-    private void createCircle (double x, double y, String name){
-        Circle circle = new Circle(x, y, 10, Color.BLUE);
+    private Location checkLocationExists(String name){
+        for(Location node : graph.getNodes()){
+            if(Objects.equals(node.toString(), name))
+                return node;
+        }
+        return null;
+    }
+
+    private void createLocation(double x, double y, String name){
+        Location location = new Location(name);
         Text label = new Text();
+        location.setFill(Color.BLUE);
+        location.setRadius(10);
+        location.setId(name);
+        location.setCenterX(x);
+        location.setCenterY(y);
+        location.setLabel(label);
         label.setText(name);
         label.setTranslateX(x + 2);
         label.setTranslateY(y + 15);
         label.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD,10));
-        label.setId(name);
-        root.getChildren().add(circle);
-        root.getChildren().add(label);
-        graph.add(name);
-        locations.put(label, circle);
+        label.setDisable(true);
+        //System.out.println(label.getText());
+        field.getChildren().addAll(location, label);
+        graph.add(location);
 
         //mouse click event on circles/places
-        circle.setOnMouseClicked(e -> {
-            if(placesClicked.contains(circle)){
-                placesClicked.remove(circle);
-                namesClicked.remove(label.getText());
-                circle.setFill(Color.BLUE);
+        location.setOnMouseClicked(e -> {
+            if(placesClicked.contains(location)){
+                placesClicked.remove(location);
+                location.setFill(Color.BLUE);
             }
-            else if(!(placesClicked.size() == 2)){
-                placesClicked.add(circle);
-                namesClicked.add(label.getText());
-                circle.setFill(Color.RED);
+            else if(placesClicked.size() != 2){
+                placesClicked.add(location);
+                location.setFill(Color.RED);
             }
         });
     }
 
     private boolean checkSaved(){
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Warning!");
-        alert.setHeaderText("Unsaved changes, continue anyway?");
-        //if ok, delete contents of file. close alert
+        alert.setHeaderText("Warning!");
+        alert.setContentText("Unsaved changes, continue anyway?");
+        //if ok, save and continue 
         //if cancel, keep everything and close alert
         if(!saved){
             Optional<ButtonType> result = alert.showAndWait();
+            if(result.get() == ButtonType.OK){
+                saved = true;
+            }
             return result.get() == ButtonType.OK;
         }
         return true;
@@ -489,4 +515,32 @@ public class PathFinder extends Application {
         }
     }
 
+    private void createLine(double startX, double startY, double endX, double endY){
+        Line connection = new Line(startX, startY, endX, endY);
+        connection.setStroke(Color.BLACK);
+        connection.setStrokeWidth(4);
+        connection.setDisable(true);
+        field.getChildren().add(connection);
+    }
+
+    static class Location extends Circle{
+        private final String name;
+        private Text label;
+        Location(String name){
+            this.name = name;
+            this.label = new Text();
+            this.label.setText(name);
+        }
+        public void setLabel(Text label){
+            this.label = label;
+        }
+
+        @Override
+        public String toString(){
+            return name;
+        }
+    }
+
 }
+
+
