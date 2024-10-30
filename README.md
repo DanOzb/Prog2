@@ -1,1 +1,1 @@
-# Prog2
+# Inlämningsuppgift från programmering 2
